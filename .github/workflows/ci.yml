@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-sql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PostgreSQL
+        uses: harmonoid/postgresql-action@v1
+        with:
+          postgres version: '15'
+          database: test_exchange_rate
+
+      - name: Test schema migrations
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: test_exchange_rate
+        run: |
+          psql -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          psql -f sql/01-extension.sql
+          psql -f sql/02-schema.sql
+          psql -f sql/03-seed-currencies.sql
+          psql -f sql/04-seed-sources.sql
+          psql -f sql/05-seed-pairs.sql
+
+          # Verify tables exist
+          psql -c "\dt" | grep -E "currencies|currency_pairs|exchange_rate_sources|exchange_rate_snapshots"
+
+          # Verify seed data
+          psql -c "SELECT count(*) FROM currencies WHERE is_active;"
+          psql -c "SELECT count(*) FROM currency_pairs WHERE is_active;"
+          psql -c "SELECT count(*) FROM exchange_rate_sources;"
+
+  validate-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install xlrd
+        run: pip install xlrd==2.0.1
+
+      - name: Syntax check
+        run: |
+          python3 -m py_compile scripts/backfill/frankfurter.py
+          python3 -m py_compile scripts/backfill/fred.py
+          python3 -m py_compile scripts/backfill/bcv_xls.py
+
+      - name: Shell check
+        run: |
+          bash -n scripts/capture/capture-exchange-rate.sh

@@ -1,0 +1,33 @@
+# History files (may contain secrets)
+.history/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Local env
+.env
+.env.local
+
+# Backups
+*.gz
+*.sql
+*.sql.gz
+
+# XLS files (large, transient)
+*.xls
+*.xlsx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test outputs
+/tmp/
