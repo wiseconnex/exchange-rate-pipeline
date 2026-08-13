@@ -1,6 +1,12 @@
 # Exchange Rate Stack — minimal PostgREST + Kong
 # Exposes the `exchange_rate` database via REST API
 # Connected to shared Postgres instance `supabase-8954-db`
+#
+# IMPORTANT: This stack joins the SHARED `dokploy-network` so it can resolve
+# and connect to the existing Postgres container (supabase-8954-db) where
+# the `facturas` and `exchange_rate` databases live. Do NOT change this to
+# a bridge network, or PostgREST will fail with PGRST000 ("could not translate
+# host name").
 
 name: exchange-rate
 
@@ -28,7 +34,7 @@ services:
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
     networks:
-      - exchange-rate-net
+      - dokploy-network
 
   rest:
     container_name: ${CONTAINER_PREFIX}-rest
@@ -45,9 +51,9 @@ services:
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
     command: ["postgrest"]
     networks:
-      - exchange-rate-net
+      - dokploy-network
 
 networks:
-  exchange-rate-net:
-    name: exchange-rate-net
-    driver: bridge
+  dokploy-network:
+    external: true
+    name: dokploy-network
