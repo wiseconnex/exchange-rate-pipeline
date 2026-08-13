@@ -9,14 +9,24 @@ on:
 jobs:
   validate-sql:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_exchange_rate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up PostgreSQL
-        uses: harmonoid/postgresql-action@v1
-        with:
-          postgres version: '15'
-          database: test_exchange_rate
 
       - name: Test schema migrations
         env:
@@ -33,12 +43,14 @@ jobs:
           psql -f sql/05-seed-pairs.sql
 
           # Verify tables exist
+          echo "=== Tables ==="
           psql -c "\dt" | grep -E "currencies|currency_pairs|exchange_rate_sources|exchange_rate_snapshots"
 
           # Verify seed data
-          psql -c "SELECT count(*) FROM currencies WHERE is_active;"
-          psql -c "SELECT count(*) FROM currency_pairs WHERE is_active;"
-          psql -c "SELECT count(*) FROM exchange_rate_sources;"
+          echo "=== Seed counts ==="
+          psql -c "SELECT count(*) AS active_currencies FROM currencies WHERE is_active;"
+          psql -c "SELECT count(*) AS active_pairs FROM currency_pairs WHERE is_active;"
+          psql -c "SELECT count(*) AS sources FROM exchange_rate_sources;"
 
   validate-scripts:
     runs-on: ubuntu-latest
@@ -61,3 +73,5 @@ jobs:
       - name: Shell check
         run: |
           bash -n scripts/capture/capture-exchange-rate.sh
+          bash -n scripts/capture/ssh_cmd.sh
+          bash -n scripts/backup/backup-pg.sh
