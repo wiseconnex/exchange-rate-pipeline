@@ -12,10 +12,12 @@ __pycache__/
 .env
 .env.local
 
-# Backups
+# Backups (but allow SQL schema in sql/)
 *.gz
-*.sql
+!sql/**/*.sql
 *.sql.gz
+backup-*.sql
+pg-dumps-*.sql
 
 # XLS files (large, transient)
 *.xls
