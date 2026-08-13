@@ -34,7 +34,7 @@ services:
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
     networks:
-      - dokploy-network
+      - supabase-stack-x8m4gg
 
   rest:
     container_name: ${CONTAINER_PREFIX}-rest
@@ -51,9 +51,9 @@ services:
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
     command: ["postgrest"]
     networks:
-      - dokploy-network
+      - supabase-stack-x8m4gg
 
 networks:
-  dokploy-network:
+  supabase-stack-x8m4gg:
     external: true
-    name: dokploy-network
+    name: supabase-stack-x8m4gg
