@@ -1,0 +1,53 @@
+# Exchange Rate Stack — minimal PostgREST + Kong
+# Exposes the `exchange_rate` database via REST API
+# Connected to shared Postgres instance `supabase-8954-db`
+
+name: exchange-rate
+
+services:
+
+  kong:
+    container_name: ${CONTAINER_PREFIX}-kong
+    image: kong:2.8.1
+    restart: unless-stopped
+    expose:
+      - 8000
+      - 8443
+    volumes:
+      - ./files/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    networks:
+      - exchange-rate-net
+
+  rest:
+    container_name: ${CONTAINER_PREFIX}-rest
+    image: postgrest/postgrest:v12.2.11
+    restart: unless-stopped
+    environment:
+      # Connect to shared Postgres instance, but to `exchange_rate` database
+      PGRST_DB_URI: postgres://authenticator:***@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+    command: ["postgrest"]
+    networks:
+      - exchange-rate-net
+
+networks:
+  exchange-rate-net:
+    name: exchange-rate-net
+    driver: bridge

@@ -35,21 +35,17 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: test_exchange_rate
         run: |
-          psql -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
-          psql -f sql/01-extension.sql
-          psql -f sql/02-schema.sql
-          psql -f sql/03-seed-currencies.sql
-          psql -f sql/04-seed-sources.sql
-          psql -f sql/05-seed-pairs.sql
-
-          # Verify tables exist
-          echo "=== Tables ==="
-          psql -c "\dt" | grep -E "currencies|currency_pairs|exchange_rate_sources|exchange_rate_snapshots"
-
-          # Verify seed data
-          echo "=== Seed counts ==="
-          psql -c "SELECT count(*) AS active_currencies FROM currencies WHERE is_active;"
-          psql -c "SELECT count(*) AS active_pairs FROM currency_pairs WHERE is_active;"
+          psql -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" && \
+          psql -f "$GITHUB_WORKSPACE/sql/01-extension.sql" && \
+          psql -f "$GITHUB_WORKSPACE/sql/02-schema.sql" && \
+          psql -f "$GITHUB_WORKSPACE/sql/03-seed-currencies.sql" && \
+          psql -f "$GITHUB_WORKSPACE/sql/04-seed-sources.sql" && \
+          psql -f "$GITHUB_WORKSPACE/sql/05-seed-pairs.sql" && \
+          echo "=== Tables ===" && \
+          psql -c "\dt" | grep -E "currencies|currency_pairs|exchange_rate_sources|exchange_rate_snapshots" && \
+          echo "=== Seed counts ===" && \
+          psql -c "SELECT count(*) AS active_currencies FROM currencies WHERE is_active;" && \
+          psql -c "SELECT count(*) AS active_pairs FROM currency_pairs WHERE is_active;" && \
           psql -c "SELECT count(*) AS sources FROM exchange_rate_sources;"
 
   validate-scripts:
