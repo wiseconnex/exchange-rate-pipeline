@@ -67,52 +67,49 @@ EOF
 ###############################################################################
 capture_frankfurter() {
     log "=== Capturing Frankfurter pairs ==="
-    local response
-    response=$(curl -sS -m 15 -A "WiseConnex-Cron/1.0" \
-        "https://api.frankfurter.dev/v1/latest?base=USD" 2>&1) || {
-        log "ERROR: Failed to fetch from Frankfurter"
-        return 1
-    }
-
-    local date_iso
-    date_iso=$(echo "$response" | python3 -c "import json,sys; print(json.load(sys.stdin).get('date',''))" 2>/dev/null)
-    if [ -z "$date_iso" ]; then
-        log "ERROR: No date in Frankfurter response"
-        return 1
-    fi
-
-    log "Frankfurter date: $date_iso"
-
+    # api.frankfurter.dev (Cloudflare) sufre thundering herd al top-of-hour:
+    # a las 00/06/12 UTC responde en 14-15s o muere en timeout. Mitigacion:
+    # offset +30s del minuto 0, timeout generoso y reintentos con backoff.
+    sleep 30
+    local tmp_json
+    tmp_json=$(mktemp)
+    local base quote
     local tmp_sql
     tmp_sql=$(mktemp)
-    python3 << PYEOF > "$tmp_sql"
-import json
-import urllib.request
-import ssl
-
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
-
-pairs_to_fetch = [
-    ('USD', ['EUR', 'GBP', 'JPY', 'CAD', 'CHF', 'CNY', 'BRL', 'MXN']),
-    ('EUR', ['USD', 'GBP', 'JPY']),
-]
-
-print("BEGIN;")
-for base, quotes in pairs_to_fetch:
-    url = f"https://api.frankfurter.dev/v1/latest?base={base}&quotes={','.join(quotes)}"
-    req = urllib.request.Request(url, headers={"User-Agent": "WiseConnex-Cron/1.0"})
-    with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-        data = json.loads(resp.read())
-    date_iso = data['date']
-    rates = data['rates']
-    for quote, rate in rates.items():
-        if rate is None:
-            continue
-        print(f"INSERT INTO public.exchange_rate_snapshots (fecha, base_currency, currency_code, source_key, promedio, compra, venta, notes) VALUES ('{date_iso}', '{base}', '{quote}', 'frankfurter', {rate}, {rate}, {rate}, 'Frankfurter live rate') ON CONFLICT (fecha, base_currency, currency_code, source_key) DO UPDATE SET promedio = EXCLUDED.promedio, captured_at = NOW();")
-print("COMMIT;")
+    echo "BEGIN;" > "$tmp_sql"
+    local ok=1
+    for base in USD EUR; do
+        case "$base" in
+            USD) quotes="EUR,GBP,JPY,CAD,CHF,CNY,BRL,MXN" ;;
+            EUR) quotes="USD,GBP,JPY" ;;
+        esac
+        if curl -sS -m 40 --retry 3 --retry-delay 20 --retry-all-errors \
+             -A "WiseConnex-Cron/1.0" \
+             "https://api.frankfurter.dev/v1/latest?base=${base}&quotes=${quotes}" \
+             -o "${tmp_json}.${base}" 2>>"$LOG_FILE"; then
+            python3 - "$base" "${tmp_json}.${base}" >> "$tmp_sql" << 'PYEOF' || ok=0
+import json, sys
+base, path = sys.argv[1], sys.argv[2]
+data = json.load(open(path))
+date_iso, rates = data['date'], data['rates']
+for quote, rate in rates.items():
+    if rate is None:
+        continue
+    print(f"INSERT INTO public.exchange_rate_snapshots (fecha, base_currency, currency_code, source_key, promedio, compra, venta, notes) VALUES ('{date_iso}', '{base}', '{quote}', 'frankfurter', {rate}, {rate}, {rate}, 'Frankfurter live rate') ON CONFLICT (fecha, base_currency, currency_code, source_key) DO UPDATE SET promedio = EXCLUDED.promedio, captured_at = NOW();")
 PYEOF
+        else
+            log "ERROR: Failed to fetch Frankfurter base=$base (3 reintentos)"
+            ok=0
+        fi
+    done
+    echo "COMMIT;" >> "$tmp_sql"
+    rm -f "${tmp_json}" "${tmp_json}.USD" "${tmp_json}.EUR"
+
+    if [ "$ok" != "1" ]; then
+        rm -f "$tmp_sql"
+        log "WARNING: Frankfurter capture failed"
+        return 1
+    fi
 
     ssh_cmd "docker exec -i supabase-8954-db psql -U supabase_admin -d exchange_rate" < "$tmp_sql" 2>&1 | tail -3 | tee -a "$LOG_FILE"
 
