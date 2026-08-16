@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     environment:
       # Connect to shared Postgres instance, but to `exchange_rate` database
-      PGRST_DB_URI: postgres://authenticator:***@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
