@@ -86,8 +86,8 @@ services:
 
   ## Secure REST routes
   - name: rest-v1
-    _comment: 'PostgREST: /rest/v1/* -> http://rest:3000/*'
-    url: http://rest:3000/
+    _comment: 'PostgREST: /rest/v1/* -> http://exchange-rate-bcueot-rest:3000/*'
+    url: http://exchange-rate-bcueot-rest:3000/
     routes:
       - name: rest-v1-all
         strip_path: true
