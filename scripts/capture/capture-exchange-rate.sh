@@ -69,8 +69,8 @@ capture_frankfurter() {
     log "=== Capturing Frankfurter pairs ==="
     # api.frankfurter.dev (Cloudflare) sufre thundering herd al top-of-hour:
     # a las 00/06/12 UTC responde en 14-15s o muere en timeout. Mitigacion:
-    # offset +30s del minuto 0, timeout generoso y reintentos con backoff.
-    sleep 30
+    # launchd dispara a :45 (ver plist), timeout generoso y reintentos.
+    # El sleep 30 se eliminó al mover el schedule a :45.
     local tmp_json
     tmp_json=$(mktemp)
     local base quote
