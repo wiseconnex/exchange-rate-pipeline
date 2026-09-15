@@ -34,4 +34,5 @@
 
 ## Changelog
 
+- 2026-09-15 — Diana: Facturas sube a #4; el orden posterior pasa a Avaluos #5, SitioWise #6 y Solidarion #7. Exchange Rate se mantiene #3 y bloqueado por `tax_kb`.
 - 2026-09-15 — Diana: creada cola #3 y roadmap M0–M5; ejecución bloqueada por `tax_kb`.

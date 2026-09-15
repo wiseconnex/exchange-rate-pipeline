@@ -11,7 +11,7 @@
 - Branch: `main`; baseline HEAD at documentation start: `c493d0c`.
 - Migration status: **`QUEUED #3`**, not active.
 - Hard blocker: do not start M0 until the global orchestrator records an evidenced **`tax_kb PASS`**.
-- Global order: `#1 Lowflow`, `#2 tax_kb`, `#3 exchange_rate`, `#4 avaluos`, `#5 sitiowise`, `#6 solidarion`, `#7 facturas`.
+- Global order: `#1 Lowflow`, `#2 tax_kb`, `#3 exchange_rate`, `#4 facturas`, `#5 avaluos`, `#6 sitiowise`, `#7 solidarion`.
 - This session is documentation-only. No live system was queried or changed.
 
 ### Current architecture described by the repository

@@ -14,7 +14,7 @@ The migration is successful only after M0–M5 pass with evidence. Creating a ta
 
 Global order:
 
-`#1 Lowflow → #2 tax_kb → #3 exchange_rate → #4 avaluos → #5 sitiowise → #6 solidarion → #7 facturas`
+`#1 Lowflow → #2 tax_kb → #3 exchange_rate → #4 facturas → #5 avaluos → #6 sitiowise → #7 solidarion`
 
 Release conditions for this repository:
 
